@@ -1,13 +1,44 @@
-Dear Hiring Manager,
+# Movie Review API
 
-I am writing to express my interest in the Software Engineer position at your organization. I have completed my M.Tech in Software Systems and hold a Bachelor's degree in Computer Science and Engineering. Through my internships in Ruby on Rails, Angular, Java, and web development, I have gained practical experience in developing, testing, and maintaining software applications while strengthening my problem-solving and teamwork skills.
+A full-stack movie review application built with Spring Boot, MySQL, and JWT authentication, with a plain HTML/CSS/JavaScript frontend.
 
-I am eager to begin my professional career as a Software Engineer and contribute my technical knowledge, dedication, and willingness to learn. I enjoy solving challenging problems, adapting to new technologies, and working collaboratively to deliver high-quality software solutions.
+## Features
+- User registration and login with BCrypt password hashing
+- JWT-based stateless authentication
+- Role-based access: only admins can add/edit/delete movies
+- Users can post, edit, and delete their own reviews
+- Average movie rating recalculated automatically
+- Pagination and search/filter on movie listings
+- Swagger API documentation
 
-I am confident that my educational background, internship experience, and passion for software development will enable me to make a positive contribution to your team. I would welcome the opportunity to discuss how my skills and enthusiasm align with your organization's goals.
+## Tech Stack
+- Java 8, Spring Boot 2.7
+- Spring Data JPA, Spring Security
+- MySQL
+- JWT (jjwt)
+- Vanilla HTML/CSS/JavaScript frontend
 
-Thank you for considering my application. I look forward to hearing from you and hope to discuss my qualifications in an interview.
+## Running locally
 
-Sincerely,
+### Backend
+1. Start MySQL (e.g. via XAMPP) and create a database named `moviedb`
+2. Update `src/main/resources/application.properties` with your DB credentials if needed
+3. Run `MovieReviewApplication.java`
+4. API runs at `http://localhost:8080`
+5. Swagger docs: `http://localhost:8080/swagger-ui.html`
 
-Sneha Tidke
+### Frontend
+Open `frontend/movie-review-frontend.html` directly in your browser while the backend is running.
+
+## API Overview
+
+| Method | Endpoint | Access |
+|---|---|---|
+| POST | /api/users/register | Public |
+| POST | /api/users/login | Public |
+| GET | /api/movies | Public |
+| POST | /api/movies | Admin only |
+| PUT /DELETE | /api/movies/{id} | Admin only |
+| GET | /api/movies/{id}/reviews | Public |
+| POST | /api/movies/{id}/reviews | Authenticated |
+| PUT /DELETE | /api/reviews/{id} | Owner only |
