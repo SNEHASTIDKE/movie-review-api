@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reel Reviews</title>
+<style>
+  :root{
+    --bg:#0e0b08; --bg2:#171210; --card:#1c1613;
+    --gold:#d9a441; --gold-dim:#8a6a2c;
+    --ink:#f3ead9; --ink-dim:#b7a98f;
+    --red:#b3432f; --green:#5b8a5a;
+    --radius:4px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh; background:
+      radial-gradient(ellipse at top, #241a12 0%, var(--bg) 60%);
+    color:var(--ink); font-family:Georgia, 'Times New Roman', serif;
+  }
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:22px 32px; border-bottom:1px solid #3a2c1c;
+  }
+  .brand{font-size:26px; letter-spacing:1px; color:var(--gold);}
+  .brand span{color:var(--ink);}
+  nav{display:flex; gap:14px; align-items:center; font-family:Arial, sans-serif; font-size:14px;}
+  .pill{
+    padding:7px 16px; border:1px solid var(--gold-dim); border-radius:20px;
+    color:var(--ink-dim); cursor:pointer; background:none; font-size:14px;
+  }
+  .pill:hover{border-color:var(--gold); color:var(--gold);}
+  .pill.active{background:var(--gold); color:#1a1309; border-color:var(--gold); font-weight:bold;}
+  main{max-width:1000px; margin:0 auto; padding:30px 24px 80px;}
+  h1{font-size:34px; margin:0 0 4px;}
+  .sub{color:var(--ink-dim); font-family:Arial, sans-serif; font-size:14px; margin-bottom:26px;}
+
+  .grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(190px,1fr)); gap:18px;}
+  .card{
+    background:var(--card); border:1px solid #3a2c1c; border-radius:var(--radius);
+    padding:16px; cursor:pointer; transition:border-color .15s, transform .15s;
+  }
+  .card:hover{border-color:var(--gold); transform:translateY(-2px);}
+  .card h3{margin:0 0 6px; font-size:18px; color:var(--ink);}
+  .meta{font-family:Arial, sans-serif; font-size:12px; color:var(--ink-dim); margin-bottom:10px;}
+  .rating{color:var(--gold); font-family:Arial, sans-serif; font-weight:bold; font-size:14px;}
+
+  .panel{
+    background:var(--card); border:1px solid #3a2c1c; border-radius:var(--radius);
+    padding:24px; margin-bottom:24px;
+  }
+  label{display:block; font-family:Arial, sans-serif; font-size:12px; color:var(--ink-dim); margin:12px 0 4px;}
+  input, textarea, select{
+    width:100%; padding:10px; background:#120d0a; border:1px solid #3a2c1c; color:var(--ink);
+    border-radius:var(--radius); font-family:Arial, sans-serif; font-size:14px;
+  }
+  textarea{resize:vertical; min-height:70px;}
+  button.main-btn{
+    margin-top:16px; padding:11px 22px; background:var(--gold); color:#1a1309;
+    border:none; border-radius:var(--radius); font-family:Arial, sans-serif; font-weight:bold;
+    cursor:pointer; font-size:14px;
+  }
+  button.main-btn:hover{background:#eab85c;}
+  button.ghost-btn{
+    margin-top:16px; margin-left:8px; padding:11px 22px; background:none; color:var(--ink-dim);
+    border:1px solid #3a2c1c; border-radius:var(--radius); cursor:pointer; font-family:Arial, sans-serif; font-size:14px;
+  }
+  .back{color:var(--gold-dim); cursor:pointer; font-family:Arial, sans-serif; font-size:13px; margin-bottom:16px; display:inline-block;}
+  .back:hover{color:var(--gold);}
+
+  .review{border-top:1px solid #3a2c1c; padding:14px 0;}
+  .review:first-child{border-top:none;}
+  .review .top{display:flex; justify-content:space-between; font-family:Arial, sans-serif; font-size:13px;}
+  .review .top .name{color:var(--gold); font-weight:bold;}
+  .review .stars{color:var(--gold);}
+  .review p{margin:6px 0 0; color:var(--ink-dim); font-size:14px;}
+
+  .msg{font-family:Arial, sans-serif; font-size:13px; padding:10px 14px; border-radius:var(--radius); margin-bottom:14px;}
+  .msg.err{background:rgba(179,67,47,.15); color:#e08b7a; border:1px solid var(--red);}
+  .msg.ok{background:rgba(91,138,90,.15); color:#9fd49e; border:1px solid var(--green);}
+
+  .empty{color:var(--ink-dim); font-family:Arial, sans-serif; font-size:14px; padding:40px 0; text-align:center;}
+  .hidden{display:none !important;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">REEL <span>REVIEWS</span></div>
+  <nav id="navArea"></nav>
+</header>
+
+<main>
+  <div id="msgArea"></div>
+  <div id="app"></div>
+</main>
+
+<script>
+const API = "http://localhost:8080/api";
+let state = {
+  token: localStorage.getItem("rr_token") || null,
+  name: localStorage.getItem("rr_name") || null,
+  role: localStorage.getItem("rr_role") || null,
+  view: "movies",
+  movieId: null
+};
+
+function setMsg(text, ok){
+  const el = document.getElementById("msgArea");
+  if(!text){ el.innerHTML = ""; return; }
+  el.innerHTML = `<div class="msg ${ok?'ok':'err'}">${text}</div>`;
+}
+
+function authHeaders(){
+  return state.token ? { "Authorization": "Bearer " + state.token } : {};
+}
+
+function logout(){
+  state.token = null; state.name = null; state.role = null;
+  localStorage.removeItem("rr_token"); localStorage.removeItem("rr_name"); localStorage.removeItem("rr_role");
+  state.view = "movies"; render();
+}
+
+function renderNav(){
+  const nav = document.getElementById("navArea");
+  if(state.token){
+    nav.innerHTML = `
+      <span style="font-family:Arial,sans-serif;font-size:13px;color:var(--ink-dim)">Hi, ${state.name} (${state.role})</span>
+      <button class="pill" onclick="goto('movies')">Movies</button>
+      <button class="pill" onclick="logout()">Log out</button>`;
+  } else {
+    nav.innerHTML = `
+      <button class="pill" onclick="goto('movies')">Movies</button>
+      <button class="pill" onclick="goto('login')">Log in</button>
+      <button class="pill" onclick="goto('register')">Register</button>`;
+  }
+}
+
+function goto(view, id){
+  state.view = view; state.movieId = id || null; setMsg(); render();
+}
+
+async function api(path, options={}){
+  const res = await fetch(API + path, {
+    ...options,
+    headers:{ "Content-Type":"application/json", ...authHeaders(), ...(options.headers||{}) }
+  });
+  let body = null;
+  try{ body = await res.json(); }catch(e){}
+  if(!res.ok){
+    const m = (body && (body.message || body.error)) || ("Request failed (" + res.status + ")");
+    throw new Error(m);
+  }
+  return body;
+}
+
+// ---------- Views ----------
+
+async function renderMovies(){
+  const app = document.getElementById("app");
+  app.innerHTML = `<h1>Now Showing</h1><div class="sub">Browse movies and see what people think.</div>
+    ${state.role === "ADMIN" ? `<div class="panel" id="addMoviePanel"></div>` : ""}
+    <div class="grid" id="movieGrid"><div class="empty">Loading...</div></div>`;
+
+  if(state.role === "ADMIN") renderAddMovieForm();
+
+  try{
+    const page = await api("/movies?page=0&size=50");
+    const movies = page.content || page;
+    const grid = document.getElementById("movieGrid");
+    if(!movies.length){ grid.innerHTML = `<div class="empty">No movies yet.</div>`; return; }
+    grid.innerHTML = movies.map(m => `
+      <div class="card" onclick="goto('detail', ${m.id})">
+        <h3>${m.title}</h3>
+        <div class="meta">${m.genre || "—"} · ${m.releaseYear || "—"}</div>
+        <div class="rating">★ ${(m.averageRating ?? 0).toFixed(1)}</div>
+      </div>`).join("");
+  }catch(e){
+    document.getElementById("movieGrid").innerHTML = `<div class="empty">Could not load movies. Is the backend running at localhost:8080?</div>`;
+  }
+}
+
+function renderAddMovieForm(){
+  document.getElementById("addMoviePanel").innerHTML = `
+    <label>Title</label><input id="m_title">
+    <label>Genre</label><input id="m_genre">
+    <label>Release year</label><input id="m_year" type="number">
+    <label>Director</label><input id="m_director">
+    <label>Description</label><textarea id="m_desc"></textarea>
+    <button class="main-btn" onclick="submitMovie()">Add Movie</button>`;
+}
+
+async function submitMovie(){
+  setMsg();
+  try{
+    await api("/movies", { method:"POST", body: JSON.stringify({
+      title: document.getElementById("m_title").value,
+      genre: document.getElementById("m_genre").value,
+      releaseYear: Number(document.getElementById("m_year").value) || null,
+      director: document.getElementById("m_director").value,
+      description: document.getElementById("m_desc").value
+    })});
+    setMsg("Movie added.", true);
+    renderMovies();
+  }catch(e){ setMsg(e.message); }
+}
+
+async function renderDetail(){
+  const app = document.getElementById("app");
+  app.innerHTML = `<span class="back" onclick="goto('movies')">← Back to movies</span><div id="detailBody">Loading...</div>`;
+  try{
+    const movie = await api("/movies/" + state.movieId);
+    const reviews = await api("/movies/" + state.movieId + "/reviews");
+    document.getElementById("detailBody").innerHTML = `
+      <h1>${movie.title}</h1>
+      <div class="sub">${movie.genre || "—"} · ${movie.releaseYear || "—"} · dir. ${movie.director || "—"}</div>
+      <div class="panel">
+        <div class="rating" style="font-size:18px">★ ${(movie.averageRating ?? 0).toFixed(1)} average</div>
+        <p style="color:var(--ink-dim); font-family:Arial, sans-serif; font-size:14px;">${movie.description || ""}</p>
+      </div>
+      ${state.token ? `
+        <div class="panel">
+          <label>Your rating (1-5)</label>
+          <input id="r_rating" type="number" min="1" max="5">
+          <label>Comment</label>
+          <textarea id="r_comment"></textarea>
+          <button class="main-btn" onclick="submitReview()">Post Review</button>
+        </div>` : `<div class="panel"><span style="font-family:Arial,sans-serif;color:var(--ink-dim)">Log in to write a review.</span></div>`}
+      <div class="panel" id="reviewsPanel">
+        ${reviews.length ? reviews.map(r => `
+          <div class="review">
+            <div class="top"><span class="name">${r.userName}</span><span class="stars">★ ${r.rating}</span></div>
+            <p>${r.comment || ""}</p>
+          </div>`).join("") : `<div class="empty">No reviews yet. Be the first.</div>`}
+      </div>`;
+  }catch(e){
+    document.getElementById("detailBody").innerHTML = `<div class="empty">Could not load this movie.</div>`;
+  }
+}
+
+async function submitReview(){
+  setMsg();
+  try{
+    await api("/movies/" + state.movieId + "/reviews", { method:"POST", body: JSON.stringify({
+      rating: Number(document.getElementById("r_rating").value),
+      comment: document.getElementById("r_comment").value
+    })});
+    setMsg("Review posted.", true);
+    renderDetail();
+  }catch(e){ setMsg(e.message); }
+}
+
+function renderLogin(){
+  document.getElementById("app").innerHTML = `
+    <h1>Log In</h1><div class="sub">Welcome back.</div>
+    <div class="panel" style="max-width:380px">
+      <label>Email</label><input id="l_email" type="email">
+      <label>Password</label><input id="l_pass" type="password">
+      <button class="main-btn" onclick="submitLogin()">Log In</button>
+    </div>`;
+}
+
+async function submitLogin(){
+  setMsg();
+  try{
+    const res = await api("/users/login", { method:"POST", body: JSON.stringify({
+      email: document.getElementById("l_email").value,
+      password: document.getElementById("l_pass").value
+    })});
+    state.token = res.token; state.name = res.name; state.role = res.role;
+    localStorage.setItem("rr_token", res.token);
+    localStorage.setItem("rr_name", res.name);
+    localStorage.setItem("rr_role", res.role);
+    goto("movies");
+  }catch(e){ setMsg(e.message); }
+}
+
+function renderRegister(){
+  document.getElementById("app").innerHTML = `
+    <h1>Register</h1><div class="sub">Join and start reviewing.</div>
+    <div class="panel" style="max-width:380px">
+      <label>Name</label><input id="reg_name">
+      <label>Email</label><input id="reg_email" type="email">
+      <label>Password</label><input id="reg_pass" type="password">
+      <button class="main-btn" onclick="submitRegister()">Create Account</button>
+    </div>`;
+}
+
+async function submitRegister(){
+  setMsg();
+  try{
+    await api("/users/register", { method:"POST", body: JSON.stringify({
+      name: document.getElementById("reg_name").value,
+      email: document.getElementById("reg_email").value,
+      password: document.getElementById("reg_pass").value
+    })});
+    setMsg("Account created. You can log in now.", true);
+    goto("login");
+  }catch(e){ setMsg(e.message); }
+}
+
+function render(){
+  renderNav();
+  if(state.view === "movies") renderMovies();
+  else if(state.view === "detail") renderDetail();
+  else if(state.view === "login") renderLogin();
+  else if(state.view === "register") renderRegister();
+}
+
+render();
+</script>
+</body>
+</html>
